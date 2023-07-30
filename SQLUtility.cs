@@ -39,6 +39,7 @@ namespace CPUFramework
                 try
                 {
                     SqlDataReader dr = cmd.ExecuteReader();
+                    CheckReturnValue(cmd);
                     if (loadtable == true)
                     {
                         dt.Load(dr);
@@ -56,6 +57,40 @@ namespace CPUFramework
             }
             SetAllColumnsAllowNull(dt);
             return dt;
+        }
+
+        private static void CheckReturnValue(SqlCommand cmd)
+        {
+            int returnvalue = 0;
+            string msg = "";
+            if (cmd.CommandType == CommandType.StoredProcedure)
+            {
+                foreach (SqlParameter p in cmd.Parameters)
+                {
+                    if (p.Direction == ParameterDirection.ReturnValue)
+                    {
+                        if (p.Value != null)
+                        {
+                            returnvalue = (int)p.Value;
+                        }
+                    }
+                    else if (p.ParameterName.ToLower() == "@message")
+                    {
+                        if (p.Value != null)
+                        {
+                            msg = p.Value.ToString();
+                        }
+                    }
+                }
+                if (returnvalue == 1)
+                {
+                    if (msg == "")
+                    {
+                        msg = $"{cmd.CommandText} did not do action that was requested.";
+                    }
+                    throw new Exception(msg);
+                }
+            }
         }
 
         public static DataTable GetDataTable(string sqlstatement)
@@ -79,7 +114,7 @@ namespace CPUFramework
             {
                 cmd.Parameters[paramname].Value = value;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new Exception(cmd.CommandText + ": " + ex.Message, ex);
             }
@@ -118,13 +153,13 @@ namespace CPUFramework
                     msg = msg.Substring(0, pos);
                     msg = msg.Replace("_", " ");
                     msg = msg + msgend;
-                    
-                    if(prefix == "f_")
+
+                    if (prefix == "f_")
                     {
                         var words = msg.Split(" ");
                         if (words.Length > 1)
                         {
-                            msg = $"Cannot delete {words[0]} because it has a related president {words[1]} record";
+                            msg = $"Cannot delete {words[0]} because it has a related {words[1]} record";
                         }
                     }
                 }
@@ -137,7 +172,7 @@ namespace CPUFramework
             int n = 0;
 
             DataTable dt = GetDataTable(sql);
-            if(dt.Rows.Count > 0 && dt.Columns.Count > 0)
+            if (dt.Rows.Count > 0 && dt.Columns.Count > 0)
             {
                 if (dt.Rows[0][0] != DBNull.Value)
                 {
@@ -149,7 +184,7 @@ namespace CPUFramework
 
         private static void SetAllColumnsAllowNull(DataTable dt)
         {
-            foreach(DataColumn c in dt.Columns)
+            foreach (DataColumn c in dt.Columns)
             {
                 c.AllowDBNull = true;
             }
@@ -160,14 +195,14 @@ namespace CPUFramework
             string val = "";
 #if DEBUG
             StringBuilder sb = new StringBuilder();
-            if(cmd.Connection != null)
+            if (cmd.Connection != null)
             {
                 sb.AppendLine($"--{cmd.Connection.DataSource}");
                 sb.AppendLine($"use {cmd.Connection.Database}");
                 sb.AppendLine("go");
             }
 
-            if(cmd.CommandType == CommandType.StoredProcedure)
+            if (cmd.CommandType == CommandType.StoredProcedure)
             {
                 sb.AppendLine($"exec {cmd.CommandText}");
                 int paramcount = cmd.Parameters.Count - 1;
@@ -190,7 +225,7 @@ namespace CPUFramework
             {
                 sb.AppendLine(cmd.CommandText);
             }
-           
+
             val = sb.ToString();
 #endif
             return val;
@@ -198,9 +233,9 @@ namespace CPUFramework
 
         public static void DebugPrintDataTable(DataTable dt)
         {
-            foreach(DataRow r in dt.Rows)
+            foreach (DataRow r in dt.Rows)
             {
-                foreach(DataColumn c in dt.Columns)
+                foreach (DataColumn c in dt.Columns)
                 {
                     Debug.Print(c.ColumnName + " = " + r[c.ColumnName].ToString());
                 }
