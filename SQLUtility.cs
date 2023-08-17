@@ -19,6 +19,7 @@ namespace CPUFramework
 
                 conn.Open();
                 SqlCommandBuilder.DeriveParameters(cmd);
+
             }
             return cmd;
         }
@@ -157,6 +158,34 @@ namespace CPUFramework
             {
                 throw new Exception(cmd.CommandText + ": " + ex.Message, ex);
             }
+        }
+
+        public static int GetParamValue(SqlCommand cmd, string procname, string paramnameoutput, string paramname, object output)
+        {
+            int id = 0;
+            {
+                using (SqlConnection conn = new SqlConnection(ConnectionString))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.CommandText = procname;
+                    cmd.Parameters.AddWithValue(paramnameoutput, id);
+                    cmd.Parameters[paramnameoutput].Direction = ParameterDirection.Output;
+                    try
+                    {
+                        conn.Open();
+                        cmd.Connection = conn;
+                        SqlCommandBuilder.DeriveParameters(cmd);
+                        SetParamValue(cmd, paramname, output);
+                        ExecuteSQL(cmd);
+                        id = (int)cmd.Parameters[paramnameoutput].Value;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception(cmd.CommandText + ": " + ex.Message, ex);
+                    }
+                }               
+            }
+            return id;
         }
 
         private static string ParseConstraintMsg(string msg)
